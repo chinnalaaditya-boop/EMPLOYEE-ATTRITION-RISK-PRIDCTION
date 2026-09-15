@@ -346,6 +346,17 @@ tbody tr:hover{background:var(--bg-alt);}
   .menu-btn{display:flex !important;}
 }
 .menu-btn{display:none; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); cursor:pointer;}
+
+/* v0 redesign layer */
+:root{--bg:#07111f;--bg-alt:#0b1728;--panel:#0e1d31;--panel-2:#12243c;--border:#1d3552;--border-soft:#142943;--text:#f3f7ff;--text-dim:#a6b8d1;--text-faint:#6f86a5;--amber:#d7ff63;--amber-soft:#26371d;--teal:#55e6d0;--teal-soft:#133d40;--coral:#ff7c76;--coral-soft:#41252b;--violet:#a995ff;--violet-soft:#2b2551}
+body{background:radial-gradient(900px 500px at 80% -10%,#19395a 0%,transparent 65%),linear-gradient(135deg,#07111f,#091827);font-size:14px}
+.sidebar{background:rgba(7,17,31,.92);border-right-color:#18304c}.brand{padding:26px 20px 22px}.brand-mark{background:linear-gradient(135deg,#d7ff63,#55e6d0);color:#09131e;box-shadow:0 0 22px rgba(215,255,99,.22)}
+.nav-item{padding:11px 13px}.nav-item.active{background:linear-gradient(90deg,rgba(215,255,99,.16),rgba(85,230,208,.05));border-color:rgba(215,255,99,.25);color:var(--amber)}
+.topbar{padding:18px 34px;background:rgba(7,17,31,.8);border-bottom-color:#18304c}.topbar h2{font-size:22px}.pill{background:#10223a;border-color:#21405e}.content{padding:30px 34px 70px;max-width:1600px;width:100%}
+.kpi-card,.chart-card,.form-card,.result-card,.about-card,.table-wrap{background:linear-gradient(145deg,rgba(16,37,61,.94),rgba(10,26,44,.96));border-color:#1d3a59;box-shadow:0 14px 32px rgba(0,0,0,.12)}.kpi-card{padding:19px 18px 16px}.kpi-value{font-size:28px}.kpi-card::before{height:3px;background:linear-gradient(90deg,var(--kpi-accent),transparent)}
+.filter-bar{background:rgba(11,29,49,.88);border-color:#1d3a59;padding:16px 18px}.chart-card{padding:20px}.chart-card h3{font-size:14px}.chart-card .chart-sub{font-size:11.5px}select,input[type=text],input[type=number]{background:#09192b;border-color:#254563}select:focus,input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(85,230,208,.1)}.btn-primary,.predict-btn{background:linear-gradient(135deg,var(--amber),#8dcc4f);color:#0b1716}.btn:hover{border-color:var(--teal)}
+@media(max-width:760px){.content{padding:20px 16px 50px}.topbar{padding:16px}.topbar-right{display:none}}
+@media(max-width:760px){#watchlist{grid-template-columns:1fr!important}.dashboard-intro h1{font-size:26px!important}}
 </style>
 </head>
 <body>
@@ -410,7 +421,12 @@ tbody tr:hover{background:var(--bg-alt);}
 
       <!-- DASHBOARD -->
       <section class="tab-panel active" id="tab-dashboard">
+        <div class="dashboard-intro" style="display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap">
+          <div><div style="color:var(--teal);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px">Executive workspace</div><h1 style="font-size:clamp(24px,3vw,36px);line-height:1.1;margin-bottom:8px">Know where your workforce needs attention.</h1><p style="color:var(--text-dim);max-width:640px">A live view of retention signals, team health, and employee risk across your organization.</p></div>
+          <button class="btn btn-primary" onclick="document.querySelector('[data-tab=explorer]').click()">View employee roster <span style="margin-left:8px">→</span></button>
+        </div>
         <div class="kpi-grid" id="kpiGrid"></div>
+        <div id="watchlist" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px"></div>
 
         <div class="filter-bar">
           <div class="filter-group">
@@ -882,9 +898,24 @@ function renderCharts(rows){
   });
 }
 
+function riskScore(r){
+  let score=0;
+  if(r.Attrition===true) score+=42;
+  if(r.OverTime===true) score+=22;
+  if((r.SatisfactionScore||3)<=2) score+=18;
+  if((r.YearsAtCompany||0)<=2) score+=12;
+  if((r.PerformanceRating||3)<=2) score+=6;
+  return Math.min(99,score+8);
+}
+function renderWatchlist(rows){
+  const el=document.getElementById('watchlist'); if(!el) return;
+  const list=rows.filter(r=>r.Full_Name).map(r=>({...r,score:riskScore(r)})).sort((a,b)=>b.score-a.score).slice(0,3);
+  el.innerHTML=list.map(r=>`<div class="chart-card" style="padding:17px;border-top:2px solid ${r.score>=60?'var(--coral)':'var(--amber)'}"><div style="display:flex;justify-content:space-between;gap:10px"><div><div style="font-weight:700">${r.Full_Name}</div><div style="font-size:11px;color:var(--text-faint);margin-top:3px">${r.JobTitle||'Employee'} · ${r.Department||'Unassigned'}</div></div><strong style="color:${r.score>=60?'var(--coral)':'var(--amber)'}">${r.score}%</strong></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px"><span class="badge ${r.OverTime?'badge-yes':'badge-no'}">${r.OverTime?'Overtime':'Balanced hours'}</span><span class="badge ${((r.SatisfactionScore||3)<=2)?'badge-yes':'badge-no'}">Satisfaction ${r.SatisfactionScore||'—'}</span></div></div>`).join('');
+}
 function renderDashboard(){
   const rows = getFilteredRows();
   renderKPIs(rows);
+  renderWatchlist(rows);
   renderCharts(rows);
 }
 
